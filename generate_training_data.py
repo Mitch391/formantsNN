@@ -25,7 +25,7 @@ def create_script(formants, name):
     script += 'Save as WAV file: "' + settings.sound_files_src + name + '.wav"'
     script_file.write(script)
     
-def generate_training_data(training_data_count=settings.number_of_test_items):
+def generate_training_data(training_data_count=settings.number_of_training_items):
     if not os.path.isdir("./data"): os.mkdir("./data")
     if os.path.isdir("./data/sound_files"):
         shutil.rmtree("./data/sound_files")

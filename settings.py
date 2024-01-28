@@ -13,8 +13,8 @@ def get_praat_install():
 
 praat_src = get_praat_install()
 
-cwd = os.getcwd()
+cwd = os.getcwd() + '/'
 sound_files_src = os.getcwd() + '/data/sound_files/'
 spectrograms_dest = os.getcwd() + '/data/spectrograms/'
-number_of_test_items = 1000
+number_of_training_items = 1000
 epochs = 20

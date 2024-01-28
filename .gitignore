@@ -1,6 +1,6 @@
-./data
-./formants
-./test
+data/
+formants/
+test/
 .DS_Store
 # Byte-compiled / optimized / DLL files
 __pycache__/

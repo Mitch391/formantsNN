@@ -2,13 +2,14 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import os
-import sound
+import sound_data
 import scipy
 import sound_to_spectrogram
 import settings
 import sys
 import subprocess
 import cv2
+import generate_training_data
 
 sample_rate = settings.sample_rate
 
@@ -16,7 +17,7 @@ def get_training_data(training_files, results_file):
     sounds = []
     results = []
     for sound_file in training_files:
-        sound = sound.Sound(sound_file)
+        sound = sound_data.Sound(sound_file)
         number = sound_file.split("/")[-1]
         number = int(number[:-4])
         sounds.append([number, sound])
@@ -150,6 +151,7 @@ def test_spectrogram(model):
     visualize(spectrogram_image, prediction[0])
 
 def main():
+    # generate_training_data.generate_training_data()
     if not os.path.isfile("./data/sounds.txt"):
         training_files = ('./data/sound_files/' + x for x in os.listdir('./data/sound_files'))
         results_file = open('./data/formants/formants.txt')
