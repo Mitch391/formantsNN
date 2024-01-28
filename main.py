@@ -30,7 +30,7 @@ def get_training_data(training_files, results_file):
     return sounds, results
 
 def get_first_005s(sounds):
-    samples = int(44100*0.05)
+    samples = int(settings.sample_rate*0.05)
     for key in range(len(sounds)):
         sounds[key][1].data = sounds[key][1].data[:samples]
 
@@ -97,18 +97,18 @@ def train_on_sound(sounds, results):
 
     model = tf.keras.Sequential([
         normalizer, 
-        # tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(2205, activation='relu'),
         tf.keras.layers.Dropout(0.2),
-        # tf.keras.layers.Dense(128),
+        tf.keras.layers.Dense(128),
         tf.keras.layers.Dense(5)
     ])  
     model.compile(optimizer='adam',
-                #   loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-                loss='categorical_crossentropy',
+                # loss=tf.reduce_mean(tf.square(expected - net)),
+                loss = tf.keras.losses.MeanSquaredError(),
                   metrics=['accuracy'])
     model.fit(sounds, results, epochs=settings.epochs)
     # print(model.predict(sounds[:5]))
+    return model
 
 
 def train_on_spectrogram(sounds, results):
@@ -150,6 +150,29 @@ def test_spectrogram(model):
     print(prediction)
     visualize(spectrogram_image, prediction[0])
 
+def test_sound(model):
+    spectrogram_image = cv2.imread("./test/a_normal.png", flags=cv2.IMREAD_GRAYSCALE).tolist()
+    sound = sound_data.Sound('./test/a_normal.wav')
+    get_first_005s([[0, sound]])
+    sound = np.array([sound.data])
+    prediction = model.predict(sound)
+    print(prediction)
+    visualize(spectrogram_image, prediction[0])
+
+def spectrogram_model():
+    results = get_results_data_from_file()
+    sounds = sound_to_spectrogram.spectrogram_to_data()
+    sounds = sorted(sounds)
+    sounds = np.array([np.array(x) for _, x in sounds])
+    model = train_on_spectrogram(sounds, results)
+    test_spectrogram(model)
+
+def sound_model():
+    results = get_results_data_from_file()
+    sounds = get_sounds_data_from_file()
+    model = train_on_sound(sounds, results)
+    test_sound(model)
+
 def main():
     # generate_training_data.generate_training_data()
     if not os.path.isfile("./data/sounds.txt"):
@@ -160,14 +183,9 @@ def main():
         #flatten(sounds)
         sounds = np.array([x[1].data for x in sounds])
         save_data(sounds)
-    else:
         # sounds, results = get_data_from_file()
-        results = get_results_data_from_file()
-        sounds = sound_to_spectrogram.spectrogram_to_data()
-        sounds = sorted(sounds)
-        sounds = np.array([np.array(x) for _, x in sounds])
-        model = train_on_spectrogram(sounds, results)
-        test_spectrogram(model)
+    spectrogram_model()
+    
 
     # sounds = fourier_of_sounds(sounds)
 
