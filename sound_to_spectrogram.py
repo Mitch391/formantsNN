@@ -6,47 +6,76 @@ import shutil
 import settings
 
 
-def convert_spectrogram(spectrogram):
+def convert_spectrogram_txt(spectrogram, start=0, end=settings.spectrogram_txt_window_size):
+    return spectrogram[:,:end]
+
+
+def convert_spectrogram_png(spectrogram, start=189, end=189+settings.spectrogram_png_window_size):
     new_spectrogram = []
     for s in spectrogram[121:-121]:
         s = [255-x for x in s]
-        s = s[189:189+settings.spectrogram_window_size]
+        s = s[start:end]
         new_spectrogram.append(np.array(s))
     spectrogram = np.array(new_spectrogram)
     return spectrogram
 
-def create_script(source, dest):
+    
+def create_spectrogram_png_and_txt_script(source, dest_png, dest_txt):
     script = "Read from file: \"" + source + "\"\n"
-    script += "To Spectrogram: 0.005, 5000, 0.002, 20, \"Gaussian\"\nPaint: 0, 0, 0, 0, 100, \"yes\", 50, 6, 0, \"no\"\nSave as 300-dpi PNG file: \"" + dest + "\""
+    script += "To Spectrogram: 0.005, 5000, 0.002, 20, \"Gaussian\"\nPaint: 0, 0, 0, 0, 100, \"yes\", 50, 6, 0, \"no\"\n"
+    script += "Save as 300-dpi PNG file: \"" + dest_png + "\"\n"
+    script += "To Matrix\n"
+    script += "Save as headerless spreadsheet file: \"" + dest_txt + "\""
     f = open(settings.cwd + "Create_spectrogram_from_sound.praat", "w")
     f.write(script)
     f.close()
 
+def create_spectrogram_png_script(source, dest):
+    script = "Read from file: \"" + source + "\"\n"
+    script += "To Spectrogram: 0.005, 5000, 0.002, 20, \"Gaussian\"\nPaint: 0, 0, 0, 0, 100, \"yes\", 50, 6, 0, \"no\"\n"
+    script += "Save as 300-dpi PNG file: \"" + dest + "\""
+    f = open(settings.cwd + "Create_spectrogram_from_sound.praat", "w")
+    f.write(script)
+    f.close()
 
-def spectrogram_to_data():
+    
+def create_spectrogram_txt_script(source, dest):
+    script = "Read from file: \"" + source + "\"\n"
+    script += "To Spectrogram: 0.005, 5000, 0.002, 20, \"Gaussian\"\nPaint: 0, 0, 0, 0, 100, \"yes\", 50, 6, 0, \"no\"\n"
+    script += "To Matrix\n"
+    script += "Save as headerless spreadsheet file: \"" + dest + "\""
+    f = open(settings.cwd + "Create_spectrogram_txt.praat", "w")
+    f.write(script)
+    f.close()
+
+
+def spectrogram_png_to_data():
     list_of_sounds = []
-    for sound in os.listdir("./data/spectrograms"):
-        spectrogram = cv2.imread("./data/spectrograms/" + sound[:-4] + ".png", flags=cv2.IMREAD_GRAYSCALE).tolist()
-        spectrogram = convert_spectrogram(spectrogram)
+    for sound in os.listdir(settings.spectrograms_dest):
+        spectrogram = cv2.imread(settings.spectrograms_dest + sound[:-4] + ".png", flags=cv2.IMREAD_GRAYSCALE).tolist()
+        spectrogram = convert_spectrogram_png(spectrogram)
         list_of_sounds.append([int(sound[:-4]), spectrogram])
     return list_of_sounds
+
+    
+def spectrogram_txt_to_data():
+    list_of_sounds = []
+    for sound in os.listdir(settings.spectrograms_text_dest):
+        spectrogram = np.loadtxt(settings.spectrograms_text_dest + sound[:-4] + '.txt', delimiter='\t')
+        spectrogram = convert_spectrogram_txt(spectrogram)
+        list_of_sounds.append([int(sound[:-4]), spectrogram])
+    return list_of_sounds
+
 
 def generate_spectrograms():
     if os.path.isdir("./data/spectrograms"):
         shutil.rmtree("./data/spectrograms")
     os.mkdir("./data/spectrograms")
-    for sound in os.listdir("./data/sound_files"):
+    os.mkdir("./data/spectrograms/pngs")
+    os.mkdir("./data/spectrograms/txts")
+    for sound in os.listdir(settings.sound_files_src):
         source = settings.sound_files_src + sound
-        dest = settings.spectrograms_dest + sound[:-4] + ".png"
-        create_script(source, dest)
+        dest_png = settings.spectrograms_dest + sound[:-4] + ".png"
+        dest_txt = settings.spectrograms_text_dest + sound[:-4] + ".txt"
+        create_spectrogram_png_and_txt_script(source, dest_png, dest_txt)
         subprocess.call([settings.praat_src, '--run', 'Create_spectrogram_from_sound.praat'])
-
-# img = cv2.imread("./data/6_spectrogram.png", flags=cv2.IMREAD_GRAYSCALE)
-# new_img = []
-# max_x = 0
-# for i in img.tolist():
-#     y = [255-x for x in i]
-#     if sum(y) > 0:
-#         new_img.append(np.array(y[119:119]))
-# pass
-# img = np.array(new_img)

@@ -27,13 +27,13 @@ def create_script(formants, name):
     
 def generate_training_data(training_data_count=settings.number_of_training_items):
     if not os.path.isdir("./data"): os.mkdir("./data")
-    if os.path.isdir("./data/sound_files"):
-        shutil.rmtree("./data/sound_files")
-    os.mkdir("./data/sound_files")
-    if not os.path.isdir("./data/formants"): os.mkdir("./data/formants")
+    if os.path.isdir(settings.sound_files_src):
+        shutil.rmtree(settings.sound_files_src)
+    os.mkdir(settings.sound_files_src)
+    if not os.path.isdir(settings.formants_file_src): os.mkdir(settings.formants_file_src)
 
-    if os.path.isfile("./data/formants/formants.txt"): os.remove("./data/formants/formants.txt")
-    formants_file = open("data/formants/formants.txt", "a")
+    if os.path.isfile(settings.formants_file_src + "formants.txt"): os.remove(settings.formants_file_src + "formants.txt")
+    formants_file = open(settings.formants_file_src + "formants.txt", "a")
 
 
     for i in range(training_data_count):

@@ -111,9 +111,9 @@ def train_on_sound(sounds, results):
     return model
 
 
-def train_on_spectrogram(sounds, results):
+def train_on_spectrogram_txt(sounds, results):
     model = tf.keras.Sequential([
-        tf.keras.layers.Flatten(input_shape=(958,settings.spectrogram_window_size)),
+        tf.keras.layers.Flatten(input_shape=(116,settings.spectrogram_txt_window_size)),
         tf.keras.layers.Dense(958, activation='relu'),
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(128),
@@ -123,7 +123,26 @@ def train_on_spectrogram(sounds, results):
     model.compile(optimizer='adam',
                 # loss=tf.reduce_mean(tf.square(expected - net)),
                 loss = tf.keras.losses.MeanSquaredError(),
-                  metrics=['accuracy'])
+                  metrics=[tf.keras.metrics.RootMeanSquaredError()])
+                #   metrics=['accuracy'])
+    model.fit(sounds, results, epochs=settings.epochs)
+    return model
+
+
+def train_on_spectrogram_png(sounds, results):
+    model = tf.keras.Sequential([
+        tf.keras.layers.Flatten(input_shape=(958,settings.spectrogram_png_window_size)),
+        tf.keras.layers.Dense(958, activation='relu'),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Dense(128),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Dense(5)
+    ])  
+    model.compile(optimizer='adam',
+                # loss=tf.reduce_mean(tf.square(expected - net)),
+                loss = tf.keras.losses.MeanSquaredError(),
+                  metrics=[tf.keras.metrics.RootMeanSquaredError()])
+                #   metrics=['accuracy'])
     model.fit(sounds, results, epochs=settings.epochs)
     return model
 
@@ -136,19 +155,35 @@ def visualize(spectrogram, data):
         new_spectrogram.append(np.array(s))
     spectrogram = np.array(new_spectrogram)
     implot = plt.imshow(spectrogram)
-    x = [20 for _ in range(len(data))]
-    y = data
-    y = [958-(i/5000)*958 for i in y]
+    for i in range(len(data)):
+        y = data[i]
+        x = [20+10*i for _ in range(len(y))]
+        y = [958-(i/5000)*958 for i in y]
 
-    plt.scatter(x, y, c="r")
+        plt.scatter(x, y, c="r")
     plt.show()
 
-def test_spectrogram(model):
+def test_spectrogram_png(model):
     spectrogram_image = cv2.imread("./test/a_normal.png", flags=cv2.IMREAD_GRAYSCALE).tolist()
-    spectrogram = np.array([sound_to_spectrogram.convert_spectrogram(spectrogram_image)])
-    prediction = model.predict(spectrogram)
-    print(prediction)
-    visualize(spectrogram_image, prediction[0])
+    spectrogram_windows = []
+    for i in range(189, len(spectrogram_image[0])-settings.spectrogram_png_window_size-189, 10):
+        spectrogram_windows.append(sound_to_spectrogram.convert_spectrogram_png(spectrogram_image, i, i+settings.spectrogram_png_window_size))
+    spectrogram_windows = np.array(spectrogram_windows)
+    # spectrogram = np.array([sound_to_spectrogram.convert_spectrogram(spectrogram_image)])
+    predictions = model.predict(spectrogram_windows)
+    visualize(spectrogram_image, predictions)
+
+
+def test_spectrogram_txt(model):
+    spectrogram_image = cv2.imread("./test/a_normal.png", flags=cv2.IMREAD_GRAYSCALE).tolist()
+    spectrogram_windows = []
+    # spectrogram_txt = 
+    for i in range(0):
+        pass
+    spectrogram_windows = np.array(spectrogram_windows)
+    # spectrogram = np.array([sound_to_spectrogram.convert_spectrogram(spectrogram_image)])
+    predictions = model.predict(spectrogram_windows)
+    visualize(spectrogram_image, predictions)
 
 def test_sound(model):
     spectrogram_image = cv2.imread("./test/a_normal.png", flags=cv2.IMREAD_GRAYSCALE).tolist()
@@ -159,13 +194,23 @@ def test_sound(model):
     print(prediction)
     visualize(spectrogram_image, prediction[0])
 
-def spectrogram_model():
+def spectrogram_png_model():
     results = get_results_data_from_file()
-    sounds = sound_to_spectrogram.spectrogram_to_data()
+    sounds = sound_to_spectrogram.spectrogram_png_to_data()
     sounds = sorted(sounds)
     sounds = np.array([np.array(x) for _, x in sounds])
-    model = train_on_spectrogram(sounds, results)
-    test_spectrogram(model)
+    model = train_on_spectrogram_png(sounds, results)
+    model.save('./spectrogram_png_model.keras')
+    # model = tf.keras.models.load_model('./spectrogram_model.keras')
+    test_spectrogram_png(model)
+
+def spectrogram_txt_model():
+    results = get_results_data_from_file()
+    sounds = sound_to_spectrogram.spectrogram_txt_to_data()
+    sounds = sorted(sounds)
+    sounds = np.array([np.array(x) for _, x in sounds])
+    model = train_on_spectrogram_txt(sounds, results)
+    model.save('./spectrogram_txt_model.keras')
 
 def sound_model():
     results = get_results_data_from_file()
@@ -184,7 +229,8 @@ def main():
         sounds = np.array([x[1].data for x in sounds])
         save_data(sounds)
         # sounds, results = get_data_from_file()
-    spectrogram_model()
+    # spectrogram_png_model()     #rmse: 439 after 500 epochs, 55ms/step
+    spectrogram_txt_model()     #rmse: 209 after 500 epochs, 5ms/step
     
 
     # sounds = fourier_of_sounds(sounds)

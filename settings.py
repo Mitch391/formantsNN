@@ -1,7 +1,8 @@
 import sys 
 import os 
 sample_rate = 44100
-spectrogram_window_size = 40
+spectrogram_png_window_size = 40
+spectrogram_txt_window_size = 20
 start_of_spectrogram = 189
 
 def get_praat_install():
@@ -14,7 +15,9 @@ def get_praat_install():
 praat_src = get_praat_install()
 
 cwd = os.getcwd() + '/'
+formants_file_src = os.getcwd() + '/data/formants/'
 sound_files_src = os.getcwd() + '/data/sound_files/'
-spectrograms_dest = os.getcwd() + '/data/spectrograms/'
-number_of_training_items = 1000
-epochs = 20
+spectrograms_dest = os.getcwd() + '/data/spectrograms/pngs/'
+spectrograms_text_dest = os.getcwd() + '/data/spectrograms/txts/'
+number_of_training_items = 5000
+epochs = 500
