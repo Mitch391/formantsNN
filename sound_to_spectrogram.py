@@ -4,10 +4,11 @@ import os
 import subprocess
 import shutil
 import settings
+import random
 
 
 def convert_spectrogram_txt(spectrogram, start=0, end=settings.spectrogram_txt_window_size):
-    return spectrogram[:,:end]
+    return spectrogram[:,start:end]
 
 
 def convert_spectrogram_png(spectrogram, start=189, end=189+settings.spectrogram_png_window_size):
@@ -53,7 +54,9 @@ def spectrogram_png_to_data():
     list_of_sounds = []
     for sound in os.listdir(settings.spectrograms_dest):
         spectrogram = cv2.imread(settings.spectrograms_dest + sound[:-4] + ".png", flags=cv2.IMREAD_GRAYSCALE).tolist()
-        spectrogram = convert_spectrogram_png(spectrogram)
+        # spectrogram = convert_spectrogram_png(spectrogram)    #always start from the beginning
+        start = len(spectrogram)-settings.spectrogram_txt_window_size-1
+        spectrogram = convert_spectrogram_png(spectrogram, random.uniform(0, start, start+settings.spectrogram_txt_window_size))  #start at a random place
         list_of_sounds.append([int(sound[:-4]), spectrogram])
     return list_of_sounds
 
