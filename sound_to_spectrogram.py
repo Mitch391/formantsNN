@@ -7,6 +7,9 @@ import settings
 import random
 
 
+def rotate_spectrogram_txt(spectrogram):
+    return np.rot90(spectrogram)
+
 def convert_spectrogram_txt(spectrogram, start=0, end=settings.spectrogram_txt_window_size):
     return spectrogram[:,start:end]
 
