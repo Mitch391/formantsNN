@@ -14,10 +14,14 @@ def get_praat_install():
 
 praat_src = get_praat_install()
 
+test_file = './test/a_normal'
 cwd = os.getcwd() + '/'
-formants_file_src = os.getcwd() + '/data/formants/'
+formants_files_src = os.getcwd() + '/data/formants/'
+straight_formants_file_src = formants_files_src + 'straight/'
+moving_formants_file_src = formants_files_src + 'moving/'
 sound_files_src = os.getcwd() + '/data/sound_files/'
 spectrograms_dest = os.getcwd() + '/data/spectrograms/pngs/'
 spectrograms_text_dest = os.getcwd() + '/data/spectrograms/txts/'
-number_of_training_items = 5000
-epochs = 2500
+number_of_training_items = 10000
+epochs = 50
+batch_size = number_of_training_items/30
