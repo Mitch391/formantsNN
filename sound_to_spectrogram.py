@@ -55,8 +55,8 @@ def create_spectrogram_txt_script(source, dest):
 
 def spectrogram_png_to_data():
     list_of_sounds = []
-    for sound in os.listdir(settings.spectrograms_dest):
-        spectrogram = cv2.imread(settings.spectrograms_dest + sound[:-4] + ".png", flags=cv2.IMREAD_GRAYSCALE).tolist()
+    for sound in os.listdir(settings.spectrograms_png_dest):
+        spectrogram = cv2.imread(settings.spectrograms_png_dest + sound[:-4] + ".png", flags=cv2.IMREAD_GRAYSCALE).tolist()
         # spectrogram = convert_spectrogram_png(spectrogram)    #always start from the beginning
         start = len(spectrogram)-settings.spectrogram_txt_window_size-1
         spectrogram = convert_spectrogram_png(spectrogram, random.uniform(0, start, start+settings.spectrogram_txt_window_size))  #start at a random place
@@ -81,7 +81,7 @@ def generate_spectrograms():
     os.mkdir("./data/spectrograms/txts")
     for sound in os.listdir(settings.sound_files_src):
         source = settings.sound_files_src + sound
-        dest_png = settings.spectrograms_dest + sound[:-4] + ".png"
+        dest_png = settings.spectrograms_png_dest + sound[:-4] + ".png"
         dest_txt = settings.spectrograms_text_dest + sound[:-4] + ".txt"
         create_spectrogram_png_and_txt_script(source, dest_png, dest_txt)
         subprocess.call([settings.praat_src, '--run', 'Create_spectrogram_from_sound.praat'])
