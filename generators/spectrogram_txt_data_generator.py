@@ -9,7 +9,7 @@ class SpectrogramTxtDataGen(tf.keras.utils.Sequence):
     # x_set: path to input items
     # y_set: output items
     def __init__(self, x_set=None, y_set=None, batch_size=settings.batch_size):
-        x_set=np.array([str(y) + '.txt' for y in sorted([int(x[:-4]) for x in os.listdir(settings.spectrograms_text_dest)])])
+        x_set=np.array([str(y) + '.txt' for y in sorted([int(x[:-4]) for x in os.listdir(settings.spectrograms_txt_dest)])])
         y_set=open(settings.straight_formants_file_src + 'formants.txt', 'r').readlines()
         new_y = {}
         for i in y_set:
@@ -40,7 +40,7 @@ class SpectrogramTxtDataGen(tf.keras.utils.Sequence):
 
     
     def __get_x(self, index):
-        x = np.loadtxt(settings.spectrograms_text_dest + self.x[index], delimiter='\t')
+        x = np.loadtxt(settings.spectrograms_txt_dest + self.x[index], delimiter='\t')
         sample = random.randint(1,10)
         x = sound_to_spectrogram.convert_spectrogram_txt(x, sample, sample+settings.spectrogram_txt_window_size)
         x = np.rot90(x)
