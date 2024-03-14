@@ -10,6 +10,7 @@ import cv2
 import generate_training_data
 from generators import spectrogram_txt_data_generator
 from generators import sound_generator
+import conv_model
 
 sample_rate = settings.sample_rate
 
@@ -84,17 +85,24 @@ def get_data_from_file(file="./data/sounds.txt", results_file="./data/formants/f
 
 def train_on_sound(sounds=None, results=None):
     model = tf.keras.Sequential([
-        tf.keras.layers.InputLayer(input_shape=settings.sound_sample_size),
-        tf.keras.layers.GaussianNoise(0.5),
+        # tf.keras.layers.InputLayer(input_shape=settings.sound_sample_size),
+        tf.keras.layers.InputLayer(input_shape=(settings.conv_samples, settings.sound_sample_size)),
+        tf.keras.layers.Normalization(),
+        tf.keras.layers.GaussianNoise(0.2),
+        tf.keras.layers.Flatten(),
+
         tf.keras.layers.Dense(settings.sound_sample_size, activation='selu'),
         tf.keras.layers.Dense(int(settings.sound_sample_size/2)),
+        # tf.keras.layers.Dense(int(settings.sound_sample_size/1.5)),
+        # tf.keras.layers.Dense(int(settings.sound_sample_size/3)),
         tf.keras.layers.Dense(5)
     ])  
     model.compile(
                 optimizer=tf.keras.optimizers.AdamW(),
                 loss = tf.keras.losses.MeanAbsoluteError(),
                 metrics=[tf.keras.metrics.RootMeanSquaredError(), tf.keras.metrics.MeanAbsoluteError()])
-    model.fit(sound_generator.SoundDataGen(), epochs=settings.epochs, validation_data=sound_generator.SoundDataGen())
+    # model.fit(sound_generator.SoundDataGen(), epochs=settings.epochs, validation_data=sound_generator.SoundDataGen())
+    model.fit(sound_generator.SoundDataGen(conv=True), epochs=settings.epochs, validation_data=sound_generator.SoundDataGen(conv=True))
     return model
 
 
@@ -139,23 +147,28 @@ def train_on_spectrogram_txt(sounds=None, results=None):
     return model
 
 
-def visualize_txt(spectrogram, data):
+def visualize_data(spectrogram, data, greyscale=False):
     new_spectrogram = []
     margin_y = int(0.1*len(spectrogram))
     margin_x = int(0.1*len(spectrogram[0]))
     for s in spectrogram[margin_y:-margin_y]:
-        s = [255-x for x in s]
+        if not greyscale:
+            s = [255-x for x in s]
         s = s[margin_x:-margin_x]
         new_spectrogram.append(np.array(s))
     spectrogram = np.array(new_spectrogram)
     new_y = 5000
     new_x = 5000/(len(spectrogram))*len(spectrogram[0])
-    implot = plt.imshow(spectrogram, extent=(0,new_x,0,new_y))
+    plt.rcParams["figure.figsize"] = [15.00, 7.00]
+    plt.rcParams["figure.autolayout"] = True
+    if greyscale:
+        implot = plt.imshow(spectrogram, cmap='gray', extent=(0,new_x,0,new_y), aspect='auto')
+    else:
+        implot = plt.imshow(spectrogram, extent=(0,new_x,0,new_y), aspect='auto')
     x_step = int(new_x / len(data))
     xs = [i for i in range(0, int(new_x), x_step)]
     for key, d in enumerate(data):
         x = [xs[key] for _ in d]
-        # d = [958-(i/5000)*958 for i in d]
         plt.scatter(x, d, c='r')
     plt.show()
 
@@ -172,22 +185,37 @@ def test_spectrogram_txt(model):
     # spectrogram = np.array([sound_to_spectrogram.convert_spectrogram(spectrogram_image)])
     predictions = model.predict(spectrogram_windows)
     print(predictions[0])
-    visualize_txt(spectrogram_image, predictions)
+    visualize_data(spectrogram_image, predictions)
 
 def test_sound(model):
     spectrogram_image = cv2.imread(settings.test_file + '.png', flags=cv2.IMREAD_GRAYSCALE).tolist()
     sound = sound_data.Sound(settings.test_file + '.wav').data
     spectrogram_windows = []
-    for i in range(0, len(sound)-settings.sound_sample_size, settings.sound_sample_size):
-        x = sound_generator.get_005s(sound, i)
+    for i in range(0, len(sound)-settings.sound_sample_size, int(settings.sound_sample_size)):
+        x = sound_generator.get_sample_size_slice(sound, i)
         spectrogram_windows.append(x)
     spectrogram_windows = np.array(spectrogram_windows)
     predictions = model.predict(spectrogram_windows)
     print(predictions[0])
-    visualize_txt(spectrogram_image, predictions)
+    visualize_data(spectrogram_image, predictions, settings.greyscale)
+
+
+def test_conv_sound(model):
+    spectrogram_image = cv2.imread(settings.test_file + '.png', flags=cv2.IMREAD_GRAYSCALE).tolist()
+    sound = sound_data.Sound(settings.test_file + '.wav').data
+    spectrogram_windows = []
+    for i in range(0, len(sound)-settings.sound_sample_size-settings.conv_samples, int(settings.sound_sample_size)):
+        x = sound_generator.get_number_sample_slices(sound, i)
+        spectrogram_windows.append(x)
+    spectrogram_windows = np.array(spectrogram_windows)
+    predictions = model.predict(spectrogram_windows)
+    print(predictions[0])
+    visualize_data(spectrogram_image, predictions, settings.greyscale)
 
 
 def spectrogram_txt_model():
+    if not os.path.isdir(settings.spectrograms_dest):
+        sound_to_spectrogram.generate_spectrograms()
     # results_straight = get_results_data_from_file()
     # # results_moving = get_results_data_from_file(settings.moving_formants_file_src + 'formants.txt')
     # sounds = sound_to_spectrogram.spectrogram_txt_to_data()
@@ -208,26 +236,31 @@ def sound_model():
     # model.save('./sound_model.keras')
     model = tf.keras.models.load_model('./sound_model.keras')
     print(model.summary())
-    test_sound(model)
+    test_conv_sound(model)
+
+
+def resnet_sound_model(train=False):
+    if train:
+        model = conv_model.resnet_sound_model()
+        print(model.summary())
+        model.compile(
+                    optimizer=tf.keras.optimizers.AdamW(),
+                    loss = tf.keras.losses.MeanAbsoluteError(),
+                    metrics=[tf.keras.metrics.RootMeanSquaredError(), tf.keras.metrics.MeanAbsoluteError()])
+        model.fit(sound_generator.SoundDataGen(conv=True), epochs=settings.epochs, validation_data=sound_generator.SoundDataGen(conv=True))
+        model.save('./resnet_sound_model.keras')
+    model = tf.keras.models.load_model('./resnet_sound_model.keras')
+    print(model.summary())
+    
+    test_conv_sound(model)
 
 def main():
-    # generate_training_data.generate_training_data()
-    # if not os.path.isfile("./data/sounds.txt"):
-    #     training_files = ('./data/sound_files/' + x for x in os.listdir('./data/sound_files'))
-    #     results_file = open(settings.straight_formants_file_src + 'formants.txt')
-    #     sounds, results = get_training_data(training_files, results_file)
-    #     get_first_005s(sounds)
-    #     #flatten(sounds)
-    #     sounds = np.array([x[1].data for x in sounds])
-    #     save_data(sounds)
-        # sounds, results = get_data_from_file()
-    # spectrogram_png_model()     #rmse: 439 after 500 epochs, 55ms/step
-    # spectrogram_txt_model()     #rmse: 209 after 500 epochs, 5ms/step > 163 after 5000 epochs
-    sound_model()
-    
-
-    # sounds = fourier_of_sounds(sounds)
-
+    if not os.path.isdir('./data/'):
+        generate_training_data.generate_training_data()
+    # spectrogram_txt_model()
+    # sound_model()
+    # resnet_sound_model(False)
+    resnet_sound_model(True)
 
 
 if __name__ == "__main__":
